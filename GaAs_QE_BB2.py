@@ -44,14 +44,14 @@ m_h = (m_hh**1.5 + m_lh**1.5 + m_so**1.5)**(2 / 3)
 
 # ----Set material parameters----
 T = 298  # K, material temperature
-N_A = 1e25  # m**(-3), doping concentration
+N_A = 10e24  # m**(-3), doping concentration
 rou = 5.32e3  # kg/m**3, density of GaAs
 E_T = kB * T / ec
 Eg = 1.519 - 0.54 * 10**(-3) * T**2 / (T + 204)  # eV, bandgap
 # Tiwari, S, Appl. Phys. Lett. 56, 6 (1990) 563-565. (experiment data)
 # Eg = Eg - 2 * 10**(-11) * np.sqrt(N_A * 1e-6)
 DEg = 3 * ec / 16 / pi / eps * np.sqrt(ec**2 * N_A / eps / kB / T)
-Eg = Eg - DEg
+# Eg = Eg - DEg
 Eg = float('%.2f' % Eg)
 DE = 0.34  # eV, split-off energy gap
 E_B = Eg / 3  # only for NA = 10**19 cm**-3
@@ -60,9 +60,10 @@ func0 = interp1d(EB_data[:, 0] * 1e6, EB_data[:, 1])
 # E_B = func0(N_A)
 W_B = np.sqrt(2 * eps * E_B / ec / N_A) * 10**9  # nm
 # print(Eg, E_B, W_B, DEg, E_T)
-E_A = -0.1  # eV, electron affinity
+E_A = -0.06  # eV, electron affinity
 thick = 1e4  # nm, thickness of GaAs active layer
 surface = 0  # position of electron emission, z = 0
+sample_num = 1
 
 # ----Define simulation time, time step and total photon number----
 total_time = 500e-12  # s
@@ -1369,6 +1370,7 @@ def electron_transport_emission(distribution_2D, types, func_tp):
                 # dist_L = np.dot(dist_L, M_st)
                 dist_L = band_bend_transfer_energy(dist_L, stept, 2)
                 bd, fd, td, dist_L = filter(dist_L)
+                '''
                 back_2D.extend(bd.tolist())
                 trap_2D.extend(td.tolist())
                 if len(fd) > 0:
@@ -1383,7 +1385,9 @@ def electron_transport_emission(distribution_2D, types, func_tp):
                 emiss_2D.extend(out_2D.tolist())
                 '''
                 if len(fd) > 0:
-                    dist_L = np.concatenate((dist_L, fd), axis=0)'''
+                    fd[:, 4] = abs(fd[:, 4])
+                    fd[:, 1] = pi - fd[:, 1]
+                    dist_L = np.concatenate((dist_L, fd), axis=0)
                 if len(dist_L) > 0:
                     energy_L = dist_L[:, 5]
                 else:
@@ -1399,6 +1403,7 @@ def electron_transport_emission(distribution_2D, types, func_tp):
                 bd, fd, td, dist_X = filter(dist_X)
                 back_2D.extend(bd.tolist())
                 trap_2D.extend(td.tolist())
+                '''
                 if len(fd) > 0:
                     out_2D, reflec_2D, trap = surface_electron_transmission(
                         fd, func_tp, 3)
@@ -1411,7 +1416,9 @@ def electron_transport_emission(distribution_2D, types, func_tp):
                 emiss_2D.extend(out_2D.tolist())
                 '''
                 if len(fd) > 0:
-                    dist_X = np.concatenate((dist_X, fd), axis=0)'''
+                    fd[:, 4] = abs(fd[:, 4])
+                    fd[:, 1] = pi - fd[:, 1]
+                    dist_X = np.concatenate((dist_X, fd), axis=0)
                 if len(dist_X) > 0:
                     energy_X = dist_X[:, 5]
                 else:
@@ -1485,6 +1492,7 @@ def filter(dist_2D):
     front_dist = dist_2D[front & (~trap), :]
     trap_dist = dist_2D[trap, :]
     rest_dist = dist_2D[(~back) & (~front) & (~trap), :]
+    front_dist[:, 9] = surface
     return back_dist, front_dist, trap_dist, rest_dist
 
 
@@ -1532,9 +1540,9 @@ def surface_electron_transmission(surface_2D, func_tp, types):
     trap_2D = reflec_2D[trap_ind]
     reflec_2D = reflec_2D[~trap_ind]
     if len(reflec_2D) > 0:
-        reflec_2D[:, 9] = surface
         reflec_2D[:, 4] = np.abs(reflec_2D[:, 4])
-        reflec_2D[:, 1] = np.arccos(abs(np.cos(reflec_2D[:, 1])))
+        # reflec_2D[:, 1] = np.arccos(abs(np.cos(reflec_2D[:, 1])))
+        reflec_2D[:, 1] = pi - reflec_2D[:, 1]
     return emission_2D, reflec_2D, trap_2D
 
 
@@ -1558,7 +1566,6 @@ def transmission_function1(E_paral, E_trans):
         P2 = np.mat([[k2 + k3, k2 - k3], [k2 - k3, k2 + k3]]) / \
             np.sqrt(k2 * k3) / 2
         P = P1 * P2
-
     if P[0, 0] == 0:
         Tp = 0
     else:
@@ -1570,26 +1577,11 @@ def transmission_function(E_paral, E_trans):
     width = 1.5e-10
     num = 50
     L = width / num
-    x = np.arange(0, width, L) + L
+    x = np.arange(0, width, L)
     V0 = 4.0
     F = (V0 - E_A - E_B) / width
     V = V0 - F * x
-    '''
-    w1 = 10e-10
-    w2 = 200e-10
-    num = 40
-    L = w1 / num
-    L2 = w2 / num
-    x1 = np.arange(0, w1, L)
-    x2 = np.arange(w1, w2, L2)
-    Q = ec / 16 / pi / eps0 * (12.85 - 1) / (12.85 + 1)
-    V0 = 1
-    F = (V0 - E_A) / w1
-    V1 = V0 - F * x1
-    V2 = V0 - F * w1 - Q / x2
-    x = np.concatenate((x1, x2), axis=0)
-    V = np.concatenate((V1, V2), axis=0)
-    '''
+
     Tp = np.mat([[1, 0], [0, 1]])
     E_in_par = E_paral + 0j
     E_out_par = E_paral + E_trans - E_trans * m_T / m_e + 0j
@@ -1601,9 +1593,9 @@ def transmission_function(E_paral, E_trans):
         p11 = 0.5 * (k_in * m_e + m_T * k_out) * \
             np.exp(-1j * k_out * L) / np.sqrt(k_in * k_out * m_e * m_T)
         p12 = 0.5 * (k_in * m_e - m_T * k_out) * \
-            np.exp(-1j * k_out * L) / np.sqrt(k_in * k_out * m_e * m_T)
-        p21 = 0.5 * (k_in * m_e - m_T * k_out) * \
             np.exp(1j * k_out * L) / np.sqrt(k_in * k_out * m_e * m_T)
+        p21 = 0.5 * (k_in * m_e - m_T * k_out) * \
+            np.exp(-1j * k_out * L) / np.sqrt(k_in * k_out * m_e * m_T)
         p22 = 0.5 * (k_in * m_e + m_T * k_out) * \
             np.exp(1j * k_out * L) / np.sqrt(k_in * k_out * m_e * m_T)
         P = np.mat([[p11, p12], [p21, p22]])
@@ -1616,10 +1608,10 @@ def transmission_function(E_paral, E_trans):
         if k1 <= 0 or k2 <= 0:
             P = 0
         else:
-            p11 = 0.5 * (k1 + k2) * np.exp(-1j * k1 * L) / np.sqrt(k1 * k2)
-            p12 = 0.5 * (k1 - k2) * np.exp(-1j * k1 * L) / np.sqrt(k1 * k2)
-            p21 = 0.5 * (k1 - k2) * np.exp(1j * k1 * L) / np.sqrt(k1 * k2)
-            p22 = 0.5 * (k1 + k2) * np.exp(1j * k1 * L) / np.sqrt(k1 * k2)
+            p11 = 0.5 * (k1 + k2) * np.exp(-1j * k2 * L) / np.sqrt(k1 * k2)
+            p12 = 0.5 * (k1 - k2) * np.exp(1j * k2 * L) / np.sqrt(k1 * k2)
+            p21 = 0.5 * (k1 - k2) * np.exp(-1j * k2 * L) / np.sqrt(k1 * k2)
+            p22 = 0.5 * (k1 + k2) * np.exp(1j * k2 * L) / np.sqrt(k1 * k2)
             P = np.mat([[p11, p12], [p21, p22]])
         Tp = Tp * P
         # print(k1, k2)
@@ -1634,6 +1626,65 @@ def transmission_function(E_paral, E_trans):
         p12 = 0.5 * (k_in - k_out) / np.sqrt(k_in * k_out)
         p21 = 0.5 * (k_in - k_out) / np.sqrt(k_in * k_out)
         p22 = 0.5 * (k_in + k_out) / np.sqrt(k_in * k_out)
+        P = np.mat([[p11, p12], [p21, p22]])
+    Tp = Tp * P
+    if Tp[0, 0] == 0:
+        Tp = 0
+    else:
+        Tp = 1 / np.abs(Tp[0, 0])**2
+    return Tp
+
+
+def transmission_function2(E_paral, E_trans):
+    width = 1.5e-10
+    num = 50
+    L = width / num
+    x = np.arange(0, width, L)
+    V0 = 4.0
+    F = (V0 - E_A - E_B) / width
+    V = V0 - F * x
+    # V = 0.28 * np.ones(num)
+
+    Tp = np.mat([[1, 0], [0, 1]])
+    E_in_par = E_paral + 0j
+    E_out_par = E_paral + E_trans - E_trans * m_T / m_e + 0j
+    k_in = (np.sqrt(2 * m_T * (E_in_par) * ec) / h_)
+    k_out = (np.sqrt(2 * m_e * (E_out_par - V[0]) * ec) / h_)
+    if k_in <= 0 or k_out <= 0:
+        P = 0
+    else:
+        p11 = 0.5 * (1 + m_T * k_out / k_in / m_e) * np.exp(-1j * k_out * L)
+        p12 = 0.5 * (1 - m_T * k_out / k_in / m_e) * np.exp(1j * k_out * L)
+        p21 = 0.5 * (1 - m_T * k_out / k_in / m_e) * np.exp(-1j * k_out * L)
+        p22 = 0.5 * (1 + m_T * k_out / k_in / m_e) * np.exp(1j * k_out * L)
+        P = np.mat([[p11, p12], [p21, p22]])
+        # P = m_T * k_out / m_e / k_in
+    Tp = Tp * P
+    for k in range(num - 2):
+        i = k + 1
+        k1 = (np.sqrt(2 * m_e * (E_out_par - V[i] + 0j) * ec) / h_)
+        k2 = (np.sqrt(2 * m_e * (E_out_par - V[i + 1] + 0j) * ec) / h_)
+        if k1 == 0:
+            P = 0
+        else:
+            p11 = 0.5 * (1 + k2 / k1) * np.exp(-1j * k2 * L)
+            p12 = 0.5 * (1 - k2 / k1) * np.exp(1j * k2 * L)
+            p21 = 0.5 * (1 - k2 / k1) * np.exp(-1j * k2 * L)
+            p22 = 0.5 * (1 + k2 / k1) * np.exp(1j * k2 * L)
+            P = np.mat([[p11, p12], [p21, p22]])
+        Tp = Tp * P
+        # print(k1, k2)
+        # print(Tp)
+
+    k_in = (np.sqrt(2 * m_e * (E_out_par - V[-1] + 0j) * ec) / h_)
+    k_out = (np.sqrt(2 * m_e * (E_out_par - E_A + 0j) * ec) / h_)
+    if k_in <= 0 or np.real(k_out) <= 0:
+        P = 0
+    else:
+        p11 = 0.5 * (1 + k_out / k_in)
+        p12 = 0.5 * (1 - k_out / k_in)
+        p21 = 0.5 * (1 - k_out / k_in)
+        p22 = 0.5 * (1 + k_out / k_in)
         P = np.mat([[p11, p12], [p21, p22]])
     Tp = Tp * P
     # print(Tp)
@@ -1661,16 +1712,19 @@ def transmission_probability(E_paral, E_trans):
     return Tp
 
 
-def plot_QE(filename, data):
-    exp_data = np.genfromtxt('GaAs_QE_experiment.csv', delimiter=',')
+def plot_QE(filename, data=None):
+    # exp_data = np.genfromtxt('GaAs_QE_experiment.csv', delimiter=',')
+    exp_data = np.genfromtxt('experiment_data.csv', delimiter=',')
+    if data is None:
+        data = np.genfromtxt('QE_10000.0_-0.05.csv', delimiter=',')
     exp_data[:, 0] = 1240 / exp_data[:, 0]
     fig1, ax1 = plt.subplots()
     ax1.plot(data[:, 0], data[:, 1], 'bo-',
-             exp_data[:, 0], exp_data[:, 1], 'rs-')
+             exp_data[:, 0], exp_data[:, sample_num], 'rs-')
     ax1.set_xlabel(r'Photon energy (eV)', fontsize=16)
     ax1.set_ylabel(r'QE (%)', fontsize=16)
     ax1.tick_params('both', direction='in', labelsize=14)
-    ax1.legend(['Simulated', 'Experimental'])
+    ax1.legend(['Simulated', 'Experimental'], frameon=False)
     plt.savefig(filename + '.pdf', format='pdf')
     plt.show()
 
@@ -1854,8 +1908,10 @@ def plot_surface_emission_probability(E_paral, Tp, func_tp):
 def plot_electron_distribution(filename, dist_2D, types):
     if types == 1:
         print('max emission energy: ', np.max(dist_2D[:, 5]))
+        E_trans = dist_2D[:, 5] * np.sin(dist_2D[:, 1])**2
         fig, ax = plt.subplots()
-        ax.hist(dist_2D[:, 5], bins=100, color='k')
+        # ax.hist(dist_2D[:, 5], bins=100, color='k')
+        ax.hist(E_trans, bins=100, color='k')
         # ax.set_xlim([-0.5, 0.6])
         # ax.set_ylim([0, 2000])
         ax.set_xlabel(r'Energy (eV)', fontsize=16)
@@ -1866,7 +1922,7 @@ def plot_electron_distribution(filename, dist_2D, types):
         plt.show()
     elif types == 2:
         fig, ax = plt.subplots()
-        ax.hist(dist_2D[:, 9], bins=200, color='k')
+        ax.hist(dist_2D[:, 9], bins=100, color='k')
         ax.set_xlim([0, 2000])
         ax.set_xlabel(r'Depth (nm)', fontsize=16)
         ax.set_ylabel(r'Counts (arb. units)', fontsize=16)
@@ -1877,7 +1933,8 @@ def plot_electron_distribution(filename, dist_2D, types):
     elif types == 3:
         angle = dist_2D[:, 1] / pi * 180
         fig, ax = plt.subplots()
-        ax.hist(angle, bins=200, color='k')
+        ax.hist(angle, bins=50, color='k')
+        # ax.set_xlim([0, 60])
         ax.set_xlabel(r'Angle ($^\circ$)', fontsize=16)
         ax.set_ylabel(r'Counts (arb. units', fontsize=16)
         ax.tick_params('both', direction='in', labelsize=14)
@@ -1943,7 +2000,7 @@ def main(opt):
         # plot_scattering_rate(3)
         plot_surface_emission_probability(E_paral, Trans_prob, func_tp)
     else:
-        raise TypeError('Wrong run option')
+        print('Wrong run option')
 
     print('run time:', time.time() - start_time, 's')
 

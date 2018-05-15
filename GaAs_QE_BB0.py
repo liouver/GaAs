@@ -67,7 +67,7 @@ surface = 0  # position of electron emission, z = 0
 # ----Define simulation time, time step and total photon number----
 total_time = 500e-12  # s
 step_time = 1e-14  # s
-Ni = 100000  # incident photon number
+Ni = 10000  # incident photon number
 
 # ----Set the electrical field----
 field_y = 0
@@ -126,6 +126,12 @@ def surface_reflection(hw):
     return func(hw)
 
 
+def transportation_efficiency(hw):
+    data = np.genfromtxt('GaAs_transportation_efficiency.csv', delimiter=',')
+    func = interp1d(data[:, 0], 0.01 * data[:, 1])
+    return func(hw)
+
+
 def bend_energy(z):
     bulk_ind = z >= W_B
     surface_ind = z <= 0
@@ -134,12 +140,6 @@ def bend_energy(z):
     Ez[surface_ind] = -E_B
     Ez[bulk_ind] = 0
     return Ez
-
-
-def transportation_efficiency(hw):
-    data = np.genfromtxt('GaAs_transportation_efficiency.csv', delimiter=',')
-    func = interp1d(data[:, 0], 0.01 * data[:, 1])
-    return func(hw)
 
 
 def photon_to_electron(hw):
@@ -231,7 +231,7 @@ def electron_distribution(hw, types):
             energy.extend(E_num)
         np.random.shuffle(energy)
     else:
-        print('Wrong photon-to-electron type')
+        raise TypeError('Wrong photon-to-electron type')
     absorb_data = np.genfromtxt('GaAs_optical_constant.txt', delimiter=',')
     func2 = interp1d(absorb_data[:, 0], absorb_data[:, 1])
     '''
@@ -282,7 +282,7 @@ def impurity_scattering(energy, types):
     types=2, scattering for L valley
     types=3, scattering for X valley
     '''
-    energy = energy.clip(0.0001)
+    energy = energy.clip(0.0005)
     E0 = energy
     n_i = N_A  # m**-3, impurity concentration
     T_i = T
@@ -313,7 +313,7 @@ def impurity_scattering(energy, types):
         Rate_ei = n_i * ec**4 * (1 + 2 * alpha_X * E0) / 32 / np.sqrt(2) / \
             pi / eps**2 / np.sqrt(m_X) / (gamma_E * ec)**1.5 * b**2 / (1 + b)
     else:
-        print('Wrong electron impurity scattering')
+        raise TypeError('Wrong electron impurity scattering')
     return Rate_ei
 
 
@@ -323,9 +323,9 @@ def electron_hole_scattering(energy, types):
     types=2, scattering for L valley
     types=3, scattering for X valley
     '''
-    energy = energy.clip(0.0001)
+    energy = energy.clip(0.0005)
     E0 = energy
-    n_h = 0.05 * N_A  # m**-3, hole concentration
+    n_h = 0.5 * N_A  # m**-3, hole concentration
     T_h = T  # K, hole temperature
     beta2 = n_h * ec**2 / eps / kB / T_h
     if types == 1:
@@ -344,7 +344,7 @@ def electron_hole_scattering(energy, types):
         Rate_eh = n_h * ec**4 / 32 / 2**0.5 / pi / eps**2 / m_X**0.5 / \
             energy**1.5 / ec**1.5 * b**2 / (1 + b) * (1 + 2 * alpha_X * E0)
     else:
-        print('Wrong electron-hole scattering type')
+        raise TypeError('Wrong electron-hole scattering type')
     return Rate_eh
 
 
@@ -354,7 +354,7 @@ def acoustic_phonon_scattering(energy, types):
     types=2, scattering for L valley
     types=3, scattering for X valley
     '''
-    energy = energy.clip(0)
+    energy = energy.clip(0.0005)
     if types == 1:
         Rate_ac = 2**0.5 * m_T**1.5 * kB * T * V_T**2 * energy**0.5 *\
             ec**2.5 / pi / h_**4 / ul**2 / rou *\
@@ -371,7 +371,7 @@ def acoustic_phonon_scattering(energy, types):
             (1 + 2 * alpha_X * energy) *\
             (1 + alpha_X * energy)**0.5
     else:
-        print('Wrong acoustic phonon scattering type')
+        raise TypeError('Wrong acoustic phonon scattering type')
     return Rate_ac
 
 
@@ -381,7 +381,7 @@ def piezoelectric_phonon_scattering(energy, types):
     types=2, scattering for L valley
     types=3, scattering for X valley
     '''
-    energy = energy.clip(0.001)
+    energy = energy.clip(0.0005)
     n_h = 1 * N_A  # m**-3, hole concentration
     beta2 = n_h * ec**2 / eps / kB / T
     if types == 1:
@@ -403,7 +403,7 @@ def piezoelectric_phonon_scattering(energy, types):
         Rate_pap = ec**2 * K_av * kB * T / 4 / pi / eps / h_**2 / vel * \
             (np.log(1 + b))
     else:
-        print('Wrong electron-hole scattering type')
+        raise TypeError('Wrong electron-hole scattering type')
     return Rate_pap
 
 
@@ -413,7 +413,7 @@ def polar_optical_scattering(energy, types):
     types=2, scattering for L valley
     types=3, scattering for X valley
     '''
-    energy = energy.clip(0.001)
+    energy = energy.clip(0.0005)
     eps_p = (1 / eps_high - 1 / eps)
     N_lo = kB * T / ec / E_lo
     N_i = N_A
@@ -439,7 +439,7 @@ def polar_optical_scattering(energy, types):
             np.log((q_max_em**2 + q0**2) / (q_min_em**2 + q0**2))
         Rate_em = ec**3 * E_lo * eps_p / 4 / \
             pi / h_**2 / vel * (N_lo + 1) * C0_em
-    if types == 2:
+    elif types == 2:
         gamma_E = energy * (1 + alpha_L * energy)
         vel = np.sqrt(2 * np.abs(energy) * ec / m_L)
         q_min_ab = np.sqrt(2 * m_L * gamma_E) / h_ * \
@@ -460,7 +460,7 @@ def polar_optical_scattering(energy, types):
             np.log((q_max_em**2 + q0**2) / (q_min_em**2 + q0**2))
         Rate_em = ec**3 * E_lo * eps_p / 4 / \
             pi / h_**2 / vel * (N_lo + 1) * C0_em
-    if types == 3:
+    elif types == 3:
         gamma_E = energy * (1 + alpha_X * energy)
         vel = np.sqrt(2 * np.abs(energy) * ec / m_X)
         q_min_ab = np.sqrt(2 * m_X * gamma_E) / h_ * \
@@ -481,6 +481,8 @@ def polar_optical_scattering(energy, types):
             np.log((q_max_em**2 + q0**2) / (q_min_em**2 + q0**2))
         Rate_em = ec**3 * E_lo * eps_p / 4 / \
             pi / h_**2 / vel * (N_lo + 1) * C0_em
+    else:
+        raise TypeError('Wrong polar optical scattering type')
     # print(Rate_ab, Rate_em, C0_ab, C0_em)
     return Rate_ab, Rate_em
 
@@ -609,7 +611,7 @@ def optical_phonon_scattering(energy, types):
             (1 + 2 * alpha_X * tempEnergy) *\
             (1 + alpha_X * tempEnergy)**0.5
     else:
-        print('Wrong optical phonon scattering type')
+        raise TypeError('Wrong optical phonon scattering type')
     return Rate_ab, Rate_em
 
 
@@ -620,7 +622,7 @@ def electron_impurity_transfer_energy(dist_2D, Rate, stept):
     energy_ind = dist_2D[:, 5] > 0
     happen = P_ind * energy_ind
     # E_loss = np.random.uniform(0, dist_2D[:, 5]).clip(0) * happen
-    # dist_2D[:, 5] = dist_2D[:, 5] - E_loss
+    # dist_2D[:, 5] -= E_loss
     return dist_2D, happen
 
 
@@ -636,7 +638,7 @@ def electron_hole_transfer_energy(dist_2D, Rate, stept):
     energy_eh_ind = dist_2D[:, 5] > 0
     happen = P_eh_ind * energy_eh_ind
     eh_loss = np.random.uniform(0, dist_2D[:, 5] - E_h).clip(0) * happen
-    dist_2D[:, 5] = dist_2D[:, 5] - eh_loss
+    dist_2D[:, 5] -= eh_loss
     return dist_2D, happen
 
 
@@ -649,7 +651,7 @@ def electron_acoustic_tranfer_energy(dist_2D, Rate, stept):
     # scatterred electron index
     P_ac_ind = np.random.uniform(0, 1, Num) <= P_ac
     happen = P_ac_ind
-    # dist_2D[:, 5] = dist_2D[:, 5] - ac_energy * happen
+    # dist_2D[:, 5] -= ac_energy * happen
     return dist_2D, happen
 
 
@@ -667,13 +669,12 @@ def electron_polar_transfer_energy(dist, Rate_ab, Rate_em, stept, types):
     P_em = stept * Rate_em
     P_ab_ind = np.random.uniform(0, 1, Num) <= P_ab
     P_em_ind = np.random.uniform(0, 1, Num) <= P_em
-    Ei = dist[:, 5].clip(0.001)
+    Ei = dist[:, 5].clip(0.0005)
     Ep_ab = (dist[:, 5] + E_lo).clip(0.0354)
     Ep_em = (dist[:, 5] - E_lo).clip(0.0001)
     happen = P_ab_ind + P_em_ind
-    dist[:, 5] = dist[:, 5] + E_lo * P_ab_ind
-    dist[:, 5] = dist[:, 5] - E_lo * P_em_ind
-
+    dist[:, 5] += E_lo * P_ab_ind
+    dist[:, 5] -= E_lo * P_em_ind
     # ----- renew the velocity -----
     '''
     renew the velocity and direction after scattering
@@ -730,7 +731,7 @@ def electron_polar_transfer_energy(dist, Rate_ab, Rate_em, stept, types):
         dist[:, 6] = np.sqrt(
             2 * np.abs(dist[:, 5]) * ec / m_X) * 10**9
     else:
-        print('wrong valley type: 1-Gamma, 2-L, 3-X')
+        raise TypeError('wrong valley type: 1-Gamma, 2-L, 3-X')
         theta = np.zeros(Num)
 
     dist[:, 2] = dist[:, 6] * np.sin(theta0) * np.cos(phi0)
@@ -775,7 +776,7 @@ def electron_optical_transfer_energy(dist, Rate_ab, Rate_em,
     Num = len(dist)
     P_ab = stept * Rate_ab
     P_ab_ind = np.random.uniform(0, 1, Num) <= P_ab
-    dist[:, 5] = dist[:, 5] + E_ab * P_ab_ind
+    dist[:, 5] += E_ab * P_ab_ind
     new = dist[P_ab_ind, :]
     dist = dist[(~P_ab_ind), :]
     new_valley_dist.extend(new.tolist())
@@ -785,7 +786,7 @@ def electron_optical_transfer_energy(dist, Rate_ab, Rate_em,
     Rate_em = Rate_em[(~P_ab_ind)]
     P_em = stept * Rate_em
     P_em_ind = np.random.uniform(0, 1, Num) <= P_em
-    dist[:, 5] = dist[:, 5] + E_em * P_em_ind
+    dist[:, 5] += E_em * P_em_ind
     new = dist[P_em_ind, :]
     dist = dist[(~P_em_ind), :]
     new_valley_dist.extend(new.tolist())
@@ -812,7 +813,7 @@ def renew_coulomb_distribution(dist_2D, happen, types):
     phi = two_pi * np.random.uniform(0, 1, Num)
     r = np.random.uniform(0, 1, Num)
 
-    energy = dist_2D[:, 5].clip(0.0001)
+    energy = dist_2D[:, 5].clip(0.0005)
     n_h = 0.05 * N_A  # m**-3, hole concentration
     T_h = T  # K, hole temperature
     beta2 = n_h * ec**2 / eps / kB / T_h
@@ -835,7 +836,7 @@ def renew_coulomb_distribution(dist_2D, happen, types):
         dist_2D[:, 6] = np.sqrt(
             2 * np.abs(dist_2D[:, 5]) * ec / m_X) * 10**9
     else:
-        print('Wrong renew distribution type for coulomb scattering')
+        raise TypeError('Wrong renew distribution type for coulomb scattering')
 
     dist_2D[:, 2] = dist_2D[:, 6] * np.sin(theta0) * np.cos(phi0)
     dist_2D[:, 3] = dist_2D[:, 6] * np.sin(theta0) * np.sin(phi0)
@@ -894,7 +895,7 @@ def renew_distribution(dist_2D, happen, types):
     elif types == 3:
         dist_2D[:, 6] = np.sqrt(2 * np.abs(dist_2D[:, 5]) * ec / m_X) * 10**9
     else:
-        print('Wrong renew distribution type for isotropic scattering')
+        raise TypeError('Wrong renew distribution type')
 
     dist_2D[:, 2] = dist_2D[:, 6] * np.sin(theta0) * np.cos(phi0)
     dist_2D[:, 3] = dist_2D[:, 6] * np.sin(theta0) * np.sin(phi0)
@@ -912,6 +913,11 @@ def renew_distribution(dist_2D, happen, types):
 
 
 def band_bend_transfer_energy(dist, stept, types):
+    '''
+    set the internal electric field in the BBR as in z direction,
+    which accelerate electrons towards surface.
+    i.e. vz will change, vx and vy will not change
+    '''
     z0 = dist[:, 9]
     M_st = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                      [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -944,6 +950,8 @@ def band_bend_transfer_energy(dist, stept, types):
         dist[:, 5] = np.abs(Ez) + \
             0.5 * m_X * (dist[:, 2]**2 + dist[:, 3]**2) / ec * 1e-18
         dist[:, 6] = np.sqrt(np.abs(dist[:, 5]) * 2 * ec / m_X) * 1e9
+    else:
+        raise TypeError('Wrong band bend transfer energy type')
 
     Ez_ind = Ez > 0
     dist[:, 4] = vz * (vz_ind * Ez_ind) + \
@@ -1066,18 +1074,8 @@ def electron_transport(distribution_2D, types):
                 max_Rate_X = 0
 
             Rate = np.max([max_Rate_T, max_Rate_L, max_Rate_X])
-            stept = 1 / Rate / 10
+            stept = 1 / Rate / 5
             t += stept
-            M_st = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                     [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-                     [0, 0, 1, 0, 0, 0, 0, stept, 0, 0],
-                     [0, 0, 0, 1, 0, 0, 0, 0, stept, 0],
-                     [0, 0, 0, 0, 1, 0, 0, 0, 0, stept],
-                     [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                     [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                     [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-                     [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
             # ----------- scattering change the distribution -----------
             # ----- get the energy distribution after scattering -------
 
@@ -1126,7 +1124,7 @@ def electron_transport(distribution_2D, types):
                 E_TL_em = -E_L_T - phonon_T_L
                 dist_2D, dist_TtoL = electron_optical_transfer_energy(
                     dist_2D, Rate_TL_ab, Rate_TL_em, E_TL_ab, E_TL_em,
-                    stept, 1)
+                    stept, 2)
 
                 # --- 5. optical phonon scattering from Gamma to X valley ---
                 if len(dist_2D) > 0:
@@ -1136,7 +1134,7 @@ def electron_transport(distribution_2D, types):
                     E_TX_em = -E_X_T - phonon_T_X
                     dist_2D, dist_TtoX = electron_optical_transfer_energy(
                         dist_2D, Rate_TX_ab, Rate_TX_em, E_TX_ab, E_TX_em,
-                        stept, 1)
+                        stept, 3)
                 else:
                     dist_TtoX = []
             else:
@@ -1190,7 +1188,7 @@ def electron_transport(distribution_2D, types):
                 E_LT_em = E_L_T - phonon_T_L
                 dist_L, dist_LtoT = electron_optical_transfer_energy(
                     dist_L, Rate_LT_ab, Rate_LT_em, E_LT_ab, E_LT_em,
-                    stept, 2)
+                    stept, 1)
 
                 # -------- 5. optical phonon scattering from L to L valley ----
                 if len(dist_L) > 0:
@@ -1221,7 +1219,7 @@ def electron_transport(distribution_2D, types):
                     E_LX_em = -E_X_T + E_L_T - phonon_L_X
                     dist_L, dist_LtoX = electron_optical_transfer_energy(
                         dist_L, Rate_LX_ab, Rate_LX_em, E_LX_ab, E_LX_em,
-                        stept, 2)
+                        stept, 3)
                 else:
                     dist_LtoX = []
             else:
@@ -1264,7 +1262,7 @@ def electron_transport(distribution_2D, types):
                 Rate_pop_ab, Rate_pop_em = polar_optical_scattering(
                     dist_X[:, 5], 3)
                 dist_X = electron_polar_transfer_energy(
-                    dist_X, Rate_pop_ab, Rate_pop_em, stept, 2)
+                    dist_X, Rate_pop_ab, Rate_pop_em, stept, 3)
 
                 # ----- 4. optical phonon scattering from X to Gamma valley ---
                 Rate_XT_ab, Rate_XT_em = optical_phonon_scattering(dist_X[
@@ -1273,7 +1271,7 @@ def electron_transport(distribution_2D, types):
                 E_XT_em = E_X_T - phonon_T_X
                 dist_X, dist_XtoT = electron_optical_transfer_energy(
                     dist_X, Rate_XT_ab, Rate_XT_em, E_XT_ab, E_XT_em,
-                    stept, 3)
+                    stept, 1)
 
                 # -------- 5. optical phonon scattering from X to L valley ----
                 if len(dist_X) > 0:
@@ -1283,7 +1281,7 @@ def electron_transport(distribution_2D, types):
                     E_XL_em = E_X_T - E_L_T - phonon_L_X
                     dist_X, dist_XtoL = electron_optical_transfer_energy(
                         dist_X, Rate_XL_ab, Rate_XL_em, E_XL_ab, E_XL_em,
-                        stept, 3)
+                        stept, 2)
 
                 # -------- 6. optical phonon scattering from X to X valley ----
                 if len(dist_X) > 0:
@@ -1637,7 +1635,7 @@ def plot_time_data(filename, time_data):
     ax1.tick_params('both', direction='in', labelsize=14)
 
     ax2 = ax1.twinx()
-    l2 = ax2.semilogy(time_data[:, 0], time_data[:, 2], 'r*', label='Emission')
+    l2 = ax2.semilogy(time_data[:, 0], time_data[:, 2], 'r*', label='Surface')
     l3 = ax2.semilogy(time_data[:, 0], time_data[:, 3], 'c.', label='Gamma')
     l4 = ax2.semilogy(time_data[:, 0], time_data[:, 4], 'ys', label='L')
     l5 = ax2.semilogy(time_data[:, 0], time_data[:, 5], 'mo', label='X')
@@ -1784,14 +1782,18 @@ def plot_scattering_rate(types):
 
 def compare_data(filename, data):
     fig1, ax1 = plt.subplots()
-    ax1.plot(data[:, 0], data[:, 3], 'o', data[:, 0],
-             transportation_efficiency(data[:, 0]), '.')
+    ax1.plot(data[:, 0], 100 * data[:, 3], 'bo-', data[:, 0],
+             100 * transportation_efficiency(data[:, 0]), 'rs-')
     ax1.set_xlabel(r'Photon energy (eV)', fontsize=16)
-    ax1.set_ylabel(r'transportation efficiency (%)', fontsize=16)
+    ax1.set_ylabel(r'transportation ratio (%)', fontsize=16)
     ax1.tick_params('both', direction='in', labelsize=14)
-    ax1.legend(['Simulated', 'Calculated'])
+    ax1.legend(['Simulated by code', 'Calculated by equation'], frameon=False)
     plt.savefig(filename + '_TE.pdf', format='pdf')
     plt.show()
+    # TR = np.concatenate(
+    #    (data[:, 0], data[:, 3], transportation_efficiency(data[:, 0])),
+    #    axis=0)
+    # np.savetxt('transportation_rotio.csv', TR, delimiter=',', fmt='%.4f')
 
 
 def plot_surface_emission_probability(E_paral, Tp, func_tp):
@@ -1829,7 +1831,7 @@ def plot_electron_distribution(filename, dist_2D, types):
         plt.show()
     elif types == 2:
         fig, ax = plt.subplots()
-        ax.hist(dist_2D[:, 9], bins=200, color='k')
+        ax.hist(dist_2D[:, 9], bins=100, color='k')
         ax.set_xlim([0, 2000])
         ax.set_xlabel(r'Depth (nm)', fontsize=16)
         ax.set_ylabel(r'Counts (arb. units)', fontsize=16)
@@ -1840,7 +1842,7 @@ def plot_electron_distribution(filename, dist_2D, types):
     elif types == 3:
         angle = dist_2D[:, 1] / pi * 180
         fig, ax = plt.subplots()
-        ax.hist(angle, bins=200, color='k')
+        ax.hist(angle, bins=100, color='k')
         ax.set_xlabel(r'Angle ($^\circ$)', fontsize=16)
         ax.set_ylabel(r'Counts (arb. units', fontsize=16)
         ax.tick_params('both', direction='in', labelsize=14)
@@ -1857,11 +1859,11 @@ def main(opt):
     hw_step = 0.05  # eV
     hw_test = 2.0  # eV
     data = []
-    E_paral = np.linspace(0.0, 2.0, 100)
-    E_trans = np.linspace(0.0, 2.0, 100)
-    Trans_prob = transmission_probability(E_paral, E_trans)
-    func_tp = interp2d(E_paral, E_trans, Trans_prob)
     if opt == 1:  # for test
+        E_paral = np.linspace(0.0, 2.0, 100)
+        E_trans = np.linspace(0.0, 2.0, 100)
+        Trans_prob = transmission_probability(E_paral, E_trans)
+        func_tp = interp2d(E_paral, E_trans, Trans_prob)
         dist_2D = electron_distribution(hw_test, 2)
         print('excited electron ratio: ', len(dist_2D) / Ni)
         # plot_electron_distribution('initial', dist_2D, 1)
@@ -1869,6 +1871,8 @@ def main(opt):
         surface_2D, back_2D, trap_2D, dist_2D, time_data = \
             electron_transport(dist_2D, 1)
         print('surface electron ratio: ', len(surface_2D) / Ni)
+        np.savetxt('surface_electron_2eV_BB.csv', surface_2D,
+                   delimiter=',', fmt='%.4f')
 
         emiss_2D, surf_trap = surface_electron_transmission(
             surface_2D, func_tp)
@@ -1877,13 +1881,18 @@ def main(opt):
               Ni * (1 - surface_reflection(hw_test)))
 
         surface_2D[:, 5] = surface_2D[:, 5] - E_B
-        emiss_2D[:, 5] = emiss_2D[:, 5] - E_B
+        emiss_2D[:, 5] = emiss_2D[:, 5] + E_A
         plot_electron_distribution('surface_' + str(hw_test), surface_2D, 1)
         plot_electron_distribution('emission_' + str(hw_test), emiss_2D, 1)
+        plot_electron_distribution('emission_' + str(hw_test), emiss_2D, 3)
         filename = 'time_evoluation_' + str(hw_test)
         plot_time_data(filename, time_data)
 
     elif opt == 2:
+        E_paral = np.linspace(0.0, 2.0, 100)
+        E_trans = np.linspace(0.0, 2.0, 100)
+        Trans_prob = transmission_probability(E_paral, E_trans)
+        func_tp = interp2d(E_paral, E_trans, Trans_prob)
         for hw in np.arange(hw_start, hw_end, hw_step):
             dist_2D = electron_distribution(hw, 2)
             print('excited electron ratio: ', len(dist_2D) / Ni)
@@ -1891,6 +1900,8 @@ def main(opt):
             surface_2D, back_2D, trap_2D, dist_2D, energy_time = \
                 electron_transport(dist_2D, 1)
             print('surface electron ratio: ', len(surface_2D) / Ni)
+            np.savetxt('surface_BB_' + str(hw) + 'eV.csv', surface_2D,
+                       delimiter=',', fmt='%.4f')
 
             # emiss_2D, surf_trap = electron_emitting(surface_2D)
             emiss_2D, surf_trap = surface_electron_transmission(
@@ -1915,12 +1926,18 @@ def main(opt):
         # save_date('initial_position_distribution.csv', dist_2D[:, 9])
         # plot_electron_distribution('', dist_2D, 1)
         # plot_scattering_rate(1)
-        plot_surface_emission_probability(E_paral, Trans_prob, func_tp)
+        # plot_surface_emission_probability(E_paral, Trans_prob, func_tp)
+        # surface_2D = np.genfromtxt(
+        #    'surface_electron_BB_2.02eV.csv', delimiter=',')
+        # surface_2D[:, 1] = pi - surface_2D[:, 1]
+        # plot_electron_distribution('surface_2.02eV_', surface_2D, 1)
+        data = np.genfromtxt('QE_10000.0_0.01_BB.csv', delimiter=',')
+        compare_data('transportation_ratio.pdf', data)
     else:
-        print('Wrong run option')
+        raise TypeError('Wrong run option')
 
     print('run time:', time.time() - start_time, 's')
 
 
 if __name__ == '__main__':
-    main(2)
+    main(3)
