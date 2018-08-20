@@ -43,7 +43,7 @@ m_X = 0.85 * m_e  # X valley effective electron mass
 m_h = (m_hh**1.5 + m_lh**1.5 + m_so**1.5)**(2 / 3)
 
 # ----Set material parameters----
-sample_num = 0
+sample_num = 1
 # thick = 140  # nm, thickness of GaAs active layer
 # N_A = 0.38e24  # m**(-3), doping concentration
 sample_parameters = np.array([[140, 0.38e24], [180, 0.9e24], [
@@ -1404,7 +1404,7 @@ def electron_transport_emission(distribution_2D, types, func_tp):
                 dist_2D = band_bend_transfer_energy(dist_2D, stept, 1)
                 # print('Gamma after BBR:', max(dist_2D[:, 5]))
                 bd, fd, td, dist_2D = filter(dist_2D)
-                # back_2D.extend(bd.tolist())
+                back_2D.extend(bd.tolist())
                 trap_2D.extend(td.tolist())
                 if len(fd) > 0:
                     out_2D, reflec_2D, trap = surface_electron_transmission(
@@ -1417,10 +1417,12 @@ def electron_transport_emission(distribution_2D, types, func_tp):
                     dist_2D = np.concatenate((dist_2D, reflec_2D), axis=0)
                 emiss_2D.extend(out_2D.tolist())
                 trap_2D.extend(trap.tolist())
+                '''
                 if len(bd) > 0:
                     bd[:, 4] = -abs(bd[:, 4])
                     bd[:, 1] = pi - bd[:, 1]
                     dist_2D = np.concatenate((dist_2D, bd), axis=0)
+                '''
 
             # -------- filtting electrons in L valley --------
             if len(dist_L) > 0:
@@ -1428,7 +1430,7 @@ def electron_transport_emission(distribution_2D, types, func_tp):
                 # dist_L = np.dot(dist_L, M_st)
                 dist_L = band_bend_transfer_energy(dist_L, stept, 2)
                 bd, fd, td, dist_L = filter(dist_L)
-                # back_2D.extend(bd.tolist())
+                back_2D.extend(bd.tolist())
                 trap_2D.extend(td.tolist())
                 '''
                 if len(fd) > 0:
@@ -1446,10 +1448,12 @@ def electron_transport_emission(distribution_2D, types, func_tp):
                     fd[:, 4] = abs(fd[:, 4])
                     fd[:, 1] = pi - fd[:, 1]
                     dist_L = np.concatenate((dist_L, fd), axis=0)
+                '''
                 if len(bd) > 0:
                     bd[:, 4] = -abs(bd[:, 4])
                     bd[:, 1] = pi - bd[:, 1]
                     dist_L = np.concatenate((dist_L, bd), axis=0)
+                '''
                 if len(dist_L) > 0:
                     energy_L = dist_L[:, 5]
                 else:
@@ -1463,7 +1467,7 @@ def electron_transport_emission(distribution_2D, types, func_tp):
                 # dist_X = np.dot(dist_X, M_st)
                 dist_X = band_bend_transfer_energy(dist_X, stept, 3)
                 bd, fd, td, dist_X = filter(dist_X)
-                # back_2D.extend(bd.tolist())
+                back_2D.extend(bd.tolist())
                 trap_2D.extend(td.tolist())
                 '''
                 if len(fd) > 0:
@@ -1481,10 +1485,12 @@ def electron_transport_emission(distribution_2D, types, func_tp):
                     fd[:, 4] = abs(fd[:, 4])
                     fd[:, 1] = pi - fd[:, 1]
                     dist_X = np.concatenate((dist_X, fd), axis=0)
+                '''
                 if len(bd) > 0:
                     bd[:, 4] = abs(bd[:, 4])
                     bd[:, 1] = pi - bd[:, 1]
                     dist_X = np.concatenate((dist_X, bd), axis=0)
+                '''
                 if len(dist_X) > 0:
                     energy_X = dist_X[:, 5]
                 else:
@@ -2132,7 +2138,7 @@ def main(opt):
             print('photon energy (eV): ', hw, ', QE (%): ', QE, 'MTE', mte, em)
             data.append([hw, QE, SR, ER, em_x, em_y, em, mte])
 
-        filename = 'QE_sample' + str(sample_num)
+        filename = 'QE_sample' + str(sample_num) + '_wo'
         data = np.array(data)
         save_date(filename, data)
         plot_QE(filename, data)

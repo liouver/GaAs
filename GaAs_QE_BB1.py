@@ -1568,7 +1568,7 @@ def transmission_function1(E_paral, E_trans):
 
 def transmission_function(E_paral, E_trans):
     width = 1.5e-10
-    num = 50
+    num = 100
     L = width / num
     x = np.arange(0, width, L) + L
     V0 = 4.0
@@ -1601,9 +1601,9 @@ def transmission_function(E_paral, E_trans):
         p11 = 0.5 * (k_in * m_e + m_T * k_out) * \
             np.exp(-1j * k_out * L) / np.sqrt(k_in * k_out * m_e * m_T)
         p12 = 0.5 * (k_in * m_e - m_T * k_out) * \
-            np.exp(-1j * k_out * L) / np.sqrt(k_in * k_out * m_e * m_T)
-        p21 = 0.5 * (k_in * m_e - m_T * k_out) * \
             np.exp(1j * k_out * L) / np.sqrt(k_in * k_out * m_e * m_T)
+        p21 = 0.5 * (k_in * m_e - m_T * k_out) * \
+            np.exp(-1j * k_out * L) / np.sqrt(k_in * k_out * m_e * m_T)
         p22 = 0.5 * (k_in * m_e + m_T * k_out) * \
             np.exp(1j * k_out * L) / np.sqrt(k_in * k_out * m_e * m_T)
         P = np.mat([[p11, p12], [p21, p22]])
@@ -1616,10 +1616,10 @@ def transmission_function(E_paral, E_trans):
         if k1 <= 0 or k2 <= 0:
             P = 0
         else:
-            p11 = 0.5 * (k1 + k2) * np.exp(-1j * k1 * L) / np.sqrt(k1 * k2)
-            p12 = 0.5 * (k1 - k2) * np.exp(-1j * k1 * L) / np.sqrt(k1 * k2)
-            p21 = 0.5 * (k1 - k2) * np.exp(1j * k1 * L) / np.sqrt(k1 * k2)
-            p22 = 0.5 * (k1 + k2) * np.exp(1j * k1 * L) / np.sqrt(k1 * k2)
+            p11 = 0.5 * (k1 + k2) * np.exp(-1j * k2 * L) / np.sqrt(k1 * k2)
+            p12 = 0.5 * (k1 - k2) * np.exp(1j * k2 * L) / np.sqrt(k1 * k2)
+            p21 = 0.5 * (k1 - k2) * np.exp(-1j * k2 * L) / np.sqrt(k1 * k2)
+            p22 = 0.5 * (k1 + k2) * np.exp(1j * k2 * L) / np.sqrt(k1 * k2)
             P = np.mat([[p11, p12], [p21, p22]])
         Tp = Tp * P
         # print(k1, k2)
@@ -1839,9 +1839,11 @@ def plot_surface_emission_probability(E_paral, Tp, func_tp):
     fig, ax = plt.subplots()
     ax.plot(E_paral, Tp[0, :], 'k-',
             E_paral, Tp[15, :], 'b--',
-            E_paral, Tp[30, :], 'r-.')
+            E_paral, Tp[30, :], 'r-.', linewidth=2)
     ax.set_xlabel(r'Longitudinal kinetic energy, $E_{//}$ (eV)', fontsize=16)
-    ax.set_ylabel(r'Transmission coefficient', fontsize=16)
+    ax.set_ylabel(r'Transmission probability', fontsize=16)
+    ax.set_xlim([0, 1.5])
+    ax.set_ylim([0, 0.5])
     ax.tick_params('both', direction='in', labelsize=14)
     ax.legend(
         [r'$E_{\perp}=0$ eV', r'$E_{\perp}=0.3$ eV', r'$E_\perp=0.6$ eV'],
@@ -1949,4 +1951,4 @@ def main(opt):
 
 
 if __name__ == '__main__':
-    main(2)
+    main(3)
