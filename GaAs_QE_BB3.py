@@ -43,7 +43,7 @@ m_X = 0.85 * m_e  # X valley effective electron mass
 m_h = (m_hh**1.5 + m_lh**1.5 + m_so**1.5)**(2 / 3)
 
 # ----Set material parameters----
-sample_num = 0
+sample_num = 3
 # thick = 140  # nm, thickness of GaAs active layer
 # N_A = 0.38e24  # m**(-3), doping concentration
 sample_parameters = np.array([[140, 0.38e24], [180, 0.9e24], [
@@ -258,7 +258,7 @@ def electron_distribution(hw, types):
         plt.savefig('DOS.pdf', format='pdf')
         plt.show()'''
         E0 = Eg
-        N = 95
+        N = 99
         delta_E = (hw - E0) / N
         norm, err = integrate.quad(lambda e: func1(e - hw) * func1(e), E0, hw,
                                    limit=10000)
@@ -2094,7 +2094,8 @@ def main(opt):
     if opt == 1:  # for test
         dist_2D = electron_distribution(hw_test, 2)
         print('excited electron ratio: ', len(dist_2D) / Ni)
-        # plot_electron_distribution('initial', dist_2D, 1)
+        plot_electron_distribution('initial_', dist_2D, 1)
+        np.savetxt('excited_electron.csv', dist_2D, delimiter=',', fmt='%.5f')
 
         emiss_2D, back_2D, trap_2D, dist_2D, time_data = \
             electron_transport_emission(dist_2D, 1, func_tp)
@@ -2155,4 +2156,4 @@ def main(opt):
 
 
 if __name__ == '__main__':
-    main(2)
+    main(1)

@@ -376,4 +376,63 @@ def plot_QE_w_wo_reflection():
     plt.show()
 
 
-calculate_emittance()
+def plot_electron_distribution(types=1):
+    '''
+    1: energy distribution, 2: z distribution, 3: angular distribution
+    4: phase space distribution
+    '''
+    dist_2D = np.genfromtxt('excited_electron_1.8eV.csv', delimiter=',')
+    filename = 'excited_electron_'
+    if types == 1:
+        fig, ax = plt.subplots()
+        ax.hist(dist_2D[:, 5], bins=102, color='k')
+        # ax.hist(E_trans, bins=100, color='k')
+        ax.set_xlim([-0.4, 0.4])
+        # ax.set_ylim([0, 2000])
+        ax.set_xlabel(r'Energy (eV)', fontsize=16)
+        ax.set_ylabel(r'Counts (arb. units)', fontsize=16)
+        ax.tick_params('both', direction='in', labelsize=14)
+        plt.text(0.32, 1900, r'(b)', fontsize=16)
+        plt.tight_layout()
+        plt.savefig(filename + 'energy_distribution.pdf', format='pdf')
+        plt.show()
+    elif types == 2:
+        fig, ax = plt.subplots()
+        ax.hist(dist_2D[:, 9], bins=75, color='k')
+        ax.set_xlim([0, 280])
+        ax.set_xlabel(r'Depth (nm)', fontsize=16)
+        ax.set_ylabel(r'Counts (arb. units)', fontsize=16)
+        ax.tick_params('both', direction='in', labelsize=14)
+        plt.text(250, 1100, r'(a)', fontsize=16)
+        plt.tight_layout()
+        plt.savefig(filename + 'posization_distribution.pdf', format='pdf')
+        plt.show()
+    elif types == 3:
+        angle = dist_2D[:, 1] / pi * 180
+        fig, ax = plt.subplots()
+        ax.hist(angle, bins=50, color='k')
+        # ax.set_xlim([0, 60])
+        ax.set_xlabel(r'Angle ($^\circ$)', fontsize=16)
+        ax.set_ylabel(r'Counts (arb. units', fontsize=16)
+        ax.tick_params('both', direction='in', labelsize=14)
+        plt.tight_layout()
+        plt.savefig(filename + 'angular_distribution.pdf', format='pdf')
+        plt.show()
+    elif types == 4:
+        x_pos = dist_2D[:, 7] * 1e-6
+        xp = np.sin(dist_2D[:, 1]) * np.cos(dist_2D[:, 0]) * 1e3
+        fig, ax = plt.subplots(figsize=(6, 5.2))
+        ax.scatter(x_pos, xp, 10, c='r', marker='o', alpha=1)
+        ax.set_xlabel('x (mm)', fontsize=16)
+        ax.set_ylabel(r"$x'$ (mrad)", fontsize=16)
+        ax.set_xlim([-1.2, 1.2])
+        # ax.set_ylim([-1.2, 1.2])
+        ax.tick_params(which='both', direction='in', labelsize=14)
+        plt.tight_layout()
+        plt.savefig(filename + 'phase_space.pdf', format='pdf')
+        plt.show()
+    else:
+        print('Wrong types')
+
+
+plot_electron_distribution(2)
