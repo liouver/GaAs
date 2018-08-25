@@ -403,7 +403,7 @@ def plot_electron_distribution(types=1):
         ax.set_xlabel(r'Depth (nm)', fontsize=16)
         ax.set_ylabel(r'Counts (arb. units)', fontsize=16)
         ax.tick_params('both', direction='in', labelsize=14)
-        plt.text(250, 1100, r'(a)', fontsize=16)
+        plt.text(250, 1120, r'(a)', fontsize=16)
         plt.tight_layout()
         plt.savefig(filename + 'posization_distribution.pdf', format='pdf')
         plt.show()
